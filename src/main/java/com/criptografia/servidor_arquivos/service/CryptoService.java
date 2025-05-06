@@ -1,25 +1,28 @@
 package com.criptografia.servidor_arquivos.service;
 
 import com.criptografia.servidor_arquivos.model.EncryptedFile;
-import org.bouncycastle.crypto.CryptoException;
-import org.bouncycastle.crypto.engines.AESEngine;
-import org.bouncycastle.crypto.engines.DESedeEngine;
-import org.bouncycastle.crypto.engines.DESEngine;
-import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
+import com.criptografia.servidor_arquivos.crypto.DiffieHellmanUtil;
+import com.criptografia.servidor_arquivos.crypto.ECKeyPairUtil;
 import org.bouncycastle.crypto.paddings.PKCS7Padding;
+import org.bouncycastle.crypto.engines.AESEngine;
+import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import java.security.SecureRandom;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.Base64;
 
 @Service
 public class CryptoService {
 
     public EncryptedFile encryptFile(byte[] data, String algorithm) throws Exception {
-        SecretKey key = generateSecretKey(algorithm);
+        SecretKey key = generateSharedSecretKey(algorithm);
         byte[] encryptedData = process(true, data, key.getEncoded(), algorithm);
         return new EncryptedFile(encryptedData, key);
     }
@@ -29,7 +32,7 @@ public class CryptoService {
     }
 
     private byte[] process(boolean forEncryption, byte[] input, byte[] keyBytes, String algorithm) throws Exception {
-        PaddedBufferedBlockCipher cipher = getCipher(algorithm);
+        PaddedBufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new AESEngine(), new PKCS7Padding());
         cipher.init(forEncryption, new KeyParameter(keyBytes));
 
         byte[] output = new byte[cipher.getOutputSize(input.length)];
@@ -42,51 +45,38 @@ public class CryptoService {
         return finalOutput;
     }
 
-    private PaddedBufferedBlockCipher getCipher(String algorithm) {
+    public SecretKey generateSharedSecretKey(String algorithm) throws Exception {
         switch (algorithm.toUpperCase()) {
-            case "AES":
-                return new PaddedBufferedBlockCipher(new AESEngine(), new PKCS7Padding());
-            case "DES":
-                return new PaddedBufferedBlockCipher(new DESEngine(), new PKCS7Padding());
-            case "3DES":
-            case "DES3":
-            case "DESEDE":
-                return new PaddedBufferedBlockCipher(new DESedeEngine(), new PKCS7Padding());
-            default:
-                throw new IllegalArgumentException("Algoritmo não suportado: " + algorithm);
-        }
-    }
+            case "DH":
+                // Lógica para DH (Diffie-Hellman)
+                return DiffieHellmanUtil.generateSharedSecret(
+                        DiffieHellmanUtil.generateKeyPair().getPrivate(),
+                        DiffieHellmanUtil.generateKeyPair().getPublic());
+            case "EC":
+                KeyPair ecKeyPair = ECKeyPairUtil.generateKeyPair();
+                return DiffieHellmanUtil.ECDiffieHellmanUtil.generateSharedSecretEC(ecKeyPair.getPrivate(), ecKeyPair.getPublic());
 
-    public SecretKey generateSecretKey(String algorithm) throws Exception {
-        KeyGenerator keyGen;
-        switch (algorithm.toUpperCase()) {
+
             case "AES":
-                keyGen = KeyGenerator.getInstance("AES");
-                keyGen.init(128);
-                break;
-            case "DES":
-                keyGen = KeyGenerator.getInstance("DES");
-                keyGen.init(56);
-                break;
-            case "3DES":
-            case "DES3":
-            case "DESEDE":
-                keyGen = KeyGenerator.getInstance("DESede");
-                keyGen.init(168);
-                break;
+                // Gerar uma chave AES com 256 bits
+                KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+                keyGenerator.init(256);  // Pode alterar o tamanho da chave conforme necessário
+                return keyGenerator.generateKey();
+
             default:
                 throw new IllegalArgumentException("Algoritmo não suportado");
         }
-        return keyGen.generateKey();
+    }
+
+    private SecretKey generateSharedSecret(PrivateKey privateKey, PublicKey publicKey) throws Exception {
+        return DiffieHellmanUtil.generateSharedSecret(privateKey, publicKey);
     }
 
     public String encodeKey(SecretKey key) {
         return Base64.getEncoder().encodeToString(key.getEncoded());
     }
 
-    public byte[] decodeKey(String base64Key) {
-        return Base64.getDecoder().decode(base64Key);
+    public byte[] decodeKey(String encodedKey) {
+        return Base64.getDecoder().decode(encodedKey);
     }
 }
-
-

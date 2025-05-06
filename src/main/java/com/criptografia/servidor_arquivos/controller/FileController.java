@@ -27,6 +27,7 @@ public class FileController {
             fileService.uploadFile(file, algorithm, email);
             return ResponseEntity.ok("Arquivo enviado com sucesso");
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).body("Erro ao enviar arquivo");
         }
     }
