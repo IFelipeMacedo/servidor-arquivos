@@ -48,7 +48,6 @@ public class CryptoService {
     public SecretKey generateSharedSecretKey(String algorithm) throws Exception {
         switch (algorithm.toUpperCase()) {
             case "DH":
-                // Lógica para DH (Diffie-Hellman)
                 return DiffieHellmanUtil.generateSharedSecret(
                         DiffieHellmanUtil.generateKeyPair().getPrivate(),
                         DiffieHellmanUtil.generateKeyPair().getPublic());
@@ -58,7 +57,6 @@ public class CryptoService {
 
 
             case "AES":
-                // Gerar uma chave AES com 256 bits
                 KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
                 keyGenerator.init(256);  // Pode alterar o tamanho da chave conforme necessário
                 return keyGenerator.generateKey();

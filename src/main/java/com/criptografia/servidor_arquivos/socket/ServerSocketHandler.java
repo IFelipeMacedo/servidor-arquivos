@@ -21,22 +21,22 @@ public class ServerSocketHandler {
             Socket clientSocket = serverSocket.accept();
             System.out.println("Cliente conectado!");
 
-            // Gera par de chaves do servidor
+
             KeyPair keyPair = DiffieHellmanUtil.generateKeyPair();
 
-            // Envia chave pública do servidor
+
             ObjectOutputStream outputStream = new ObjectOutputStream(clientSocket.getOutputStream());
             outputStream.writeObject(keyPair.getPublic());
             outputStream.flush();
 
-            // Recebe chave pública do cliente
+
             PublicKey clientPublicKey = receiveClientPublicKey(clientSocket);
 
-            // Gera chave secreta compartilhada
+
             SecretKey sharedSecret = DiffieHellmanUtil.generateSharedSecret(keyPair.getPrivate(), clientPublicKey);
             System.out.println("Chave secreta compartilhada gerada no servidor.");
 
-            // Aqui você pode continuar a comunicação criptografada com o cliente
+
             clientSocket.close();
         }
     }
